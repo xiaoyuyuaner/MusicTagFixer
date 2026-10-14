@@ -2,15 +2,21 @@ name: Release Windows build
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   release:
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release v0.1.0]')
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.1.0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +39,7 @@ jobs:
         run: >
           Compress-Archive
           -LiteralPath "dist/音乐标签与云盘修复工具"
-          -DestinationPath "MusicTagFixer-Windows-${{ github.ref_name }}.zip"
+          -DestinationPath "MusicTagFixer-Windows-${{ env.RELEASE_TAG }}.zip"
           -CompressionLevel Optimal
 
       - name: Create GitHub Release
@@ -41,7 +47,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "${{ github.ref_name }}"
-          "MusicTagFixer-Windows-${{ github.ref_name }}.zip"
+          gh release create "${{ env.RELEASE_TAG }}"
+          "MusicTagFixer-Windows-${{ env.RELEASE_TAG }}.zip"
+          --target "${{ github.sha }}"
           --generate-notes
-          --title "MusicTagFixer ${{ github.ref_name }}"
+          --title "MusicTagFixer ${{ env.RELEASE_TAG }}"
+
